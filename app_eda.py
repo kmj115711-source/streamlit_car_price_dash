@@ -1,53 +1,57 @@
 import streamlit as st
-import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sb
 
-def run_eda() : 
-    # 데이터 불러오기
+
+def run_eda():
     df = pd.read_csv('./data/Car_Purchasing_Data.csv')
 
-    st.text('이 데이터는 Car_Purchasing_Data.csv 데이터 입니다.')
+    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.subheader('탐색적 데이터 분석 (EDA)')
+    st.markdown('<div class="small muted">데이터 구조를 빠르게 파악하고 시각화합니다.</div>', unsafe_allow_html=True)
 
-    # 데이터 보여주기
-    radio_menu = ['데이터 프레임','기본통계']
-    radio_choice = st.radio('선택 하세요', radio_menu)
+    # 데이터 / 통계 선택
+    radio_menu = ['데이터 프레임', '기본통계']
+    radio_choice = st.radio('보기', radio_menu, horizontal=True)
     if radio_choice == radio_menu[0]:
         st.dataframe(df)
-    elif radio_choice == radio_menu[1] :
+    else:
         st.dataframe(df.describe())
 
+    st.markdown('---')
     st.subheader('최대 / 최소값 확인')
+    min_max_menu = df.columns[4:]
+    select_choice = st.selectbox('컬럼을 선택하세요', min_max_menu)
 
-    # 나이대는 20살 부터 70살 까지 있다
-    # 연봉은 20000달러 부터 100000달러까지 있다
-    min_max_menu = df.columns[4 : ]
-    select_choice = st.selectbox('컬럼을 선택 하세요', min_max_menu)
-    print(select_choice)
+    min_val = int(df[select_choice].min())
+    max_val = int(df[select_choice].max())
+    st.info(f'{select_choice}는 {min_val} 부터 {max_val} 까지 있습니다.')
 
-    st.info(f'{select_choice}는 { int(df[select_choice].min()) } 부터 { int(df[select_choice].max()) } 까지 있습니다.')
-    df[select_choice].min()
-    df[select_choice].max()
-
-   # 상관관계 분석
-
+    st.markdown('---')
     st.subheader('상관관계 분석')
+    multi_menu = df.columns[4:]
+    choice_multi_list = st.multiselect('컬럼을 2개 이상 선택하세요.', multi_menu)
 
-    multi_menu = df.columns[4 : ]
-    choice_multi_list= st.multiselect('컬럼을 2개 이상 선택 하세요.', multi_menu)
+    if len(choice_multi_list) >= 2:
+        corr = df[choice_multi_list].corr(numeric_only=True)
+        st.dataframe(corr)
 
-    print(choice_multi_list)
-
-    if len(choice_multi_list) >=2 :
-        st.dataframe(df[choice_multi_list].corr(numeric_only = True))
-
-        fig1 = plt.figure()
-        sb.heatmap(data = df[choice_multi_list].corr(numeric_only = True), vmin = -1, vmax = 1, cmap = 'coolwarm', annot=True, fmt = '.2f', linewidths=0.8)
+        fig1, ax1 = plt.subplots(figsize=(6, 5))
+        sb.heatmap(corr, vmin=-1, vmax=1, cmap='coolwarm', annot=True, fmt='.2f', linewidths=0.8, ax=ax1)
         st.pyplot(fig1)
 
-        
+    st.markdown('---')
     st.subheader('각 컬럼간의 pair plot')
-    fig2 = sb.pairplot(data = df, vars=['Age','Annual Salary','Credit Card Debt','Net Worth','Car Purchase Amount'])
-    st.pyplot(fig2)
+    vars_for_pair = ['Age', 'Annual Salary', 'Credit Card Debt', 'Net Worth', 'Car Purchase Amount']
+    # pairplot은 큰 리소스를 쓸 수 있으므로 선택적으로 렌더링
+    if st.checkbox('Pair plot 표시 (시간이 걸릴 수 있음)'):
+        try:
+            g = sb.pairplot(data=df, vars=vars_for_pair)
+            # seaborn의 PairGrid에서 figure 추출
+            st.pyplot(g.fig)
+        except Exception as e:
+            st.error('pair plot 렌더링 중 오류가 발생했습니다: ' + str(e))
+
+    st.markdown('</div>', unsafe_allow_html=True)
    

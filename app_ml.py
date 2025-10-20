@@ -2,42 +2,53 @@ import streamlit as st
 import joblib
 import pandas as pd
 
-def run_ml() :
+
+def run_ml():
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.subheader('구매 금액 예측하기')
+    st.markdown('<div class="small muted">아래 정보를 입력하면 머신러닝 모델이 예상 구매 금액을 안내합니다.</div>', unsafe_allow_html=True)
 
-    st.info('아래 정보를 입력하면, 금액을 예측해 드립니다.')
+    gender_list = ['여자', '남자']
 
-    gender_list = ['여자','남자']
-    gender = st.radio('성별을 입력 하세요.', gender_list)
+    with st.form('prediction_form'):
+        col1, col2 = st.columns([1, 2])
+        with col1:
+            gender = st.radio('성별', gender_list)
+            age = st.number_input('나이', min_value=18, max_value=100, value=30)
+        with col2:
+            salary = st.number_input('연봉(달러)', min_value=0, value=50000, step=1000)
+            debt = st.number_input('카드 빚(달러)', min_value=0, value=1000, step=100)
+            worth = st.number_input('자산(달러)', min_value=0, value=20000, step=1000)
 
-    if gender == gender_list[0] :
-        gender_data = 0
-    else : 
-        gender_data = 1
+        submitted = st.form_submit_button('예측하기')
 
-    age = st.number_input('나이 입력', min_value=20 , max_value=90)
+    if submitted:
+        gender_data = 0 if gender == gender_list[0] else 1
 
-    salary = st.number_input('연봉 입력(달러)', min_value=10000)
-    debt = st.number_input('카드빛 입력(달러)', min_value=0)
-    worth = st.number_input('자산 입력(달러)', min_value=10000, step=1000)
+        # 모델 로드
+        try:
+            regressor = joblib.load('./model/regressor.pkl')
+        except Exception as e:
+            st.error('모델을 불러오는 데 실패했습니다. model/regressor.pkl 파일을 확인하세요.\n' + str(e))
+            return
 
-    if st.button('예측하기!') :
-        # 모델 가져오기
-        regressor = joblib.load('./model/regressor.pkl')
+        new_data = [{'Gender': gender_data, 'Age': age, 'Annual Salary': salary, 'Credit Card Debt': debt, 'Net Worth': worth}]
+        df_new = pd.DataFrame(new_data)
 
-        # 유저 입력 데이터를 , 예측할 수 있게 가공하기
-        new_data = [ {'Gender' : gender_data, 'Age' : age, 'Annual Salary' : salary, 'Credit Card Debt': debt , 'Net Worth' : worth} ]
-        df_new= pd.DataFrame(data = new_data)
+        try:
+            y_pred = regressor.predict(df_new)
+        except Exception as e:
+            st.error('예측 중 오류가 발생했습니다: ' + str(e))
+            return
 
-        # 예측하고, 결과 보여주기
-        y_pred = regressor.predict(df_new)
+        pred_val = float(y_pred[0])
+        if pred_val <= 0:
+            st.warning('예측 결과가 유효하지 않습니다. 입력값을 확인해주세요.')
+        else:
+            price = f"{round(pred_val):,}"
+            st.success(f'예측한 금액은 {price} 달러 입니다.')
 
-        if y_pred < 0 :
-            st.warning('구매 금액 예측이 어렵습니다.')
-        else :
-            price = format( round(y_pred[0]) ,  ',') 
-
-            st.info( f'예측한 금액은 {price} 달러입니다.' )
+    st.markdown('</div>', unsafe_allow_html=True)
 
  
 
